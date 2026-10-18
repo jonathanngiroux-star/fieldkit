@@ -64,6 +64,33 @@ fieldkit export csv --survey <survey-id> --data-dir ./data > responses.csv
 Cold start is minutes: one binary, one SQLite file under `--data-dir`,
 no Kubernetes.
 
+## Desktop GUI
+
+The GUI is a [Wails](https://github.com/wailsapp/wails) v2 desktop
+app (Linux: WebKitGTK; Windows: WebView2). It is a thin renderer over
+the same logic layer as the CLI — one data model, one SQLite file.
+
+```sh
+# one-time: Linux needs the webkit2gtk-4.1 dev headers
+#   Debian/Ubuntu: sudo apt install libwebkit2gtk-4.1-dev
+#   Arch: sudo pacman -S webkit2gtk-4.1
+go build -tags "wails production webkit2_41" -o fieldkit-desktop ./cmd/fieldkit
+./fieldkit-desktop desktop --data-dir ./data
+```
+
+The default (cgo-free) binary prints these instructions instead of
+including the GUI, so the CLI binary keeps working in Docker/scratch/CI.
+
+Both the GUI and the TUI open with a first-run wizard that walks setup
+and the core workflow with real operations (it creates the demo survey,
+answers it, and shows the export), then can be reopened any time from
+the sidebar ("Help: open wizard") or with the `w` key.
+
+The GUI covers: survey authoring from JSON, a respondent runner with
+live branch logic, the response table with CSV download, the Typeform
+migrate dry-run viewer, plugin manifest validation (errors shown, never
+a crash), and the donate view with copy buttons.
+
 ## Commands
 
 | Command | What it does |

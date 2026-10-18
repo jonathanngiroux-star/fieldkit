@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fieldkit</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <nav id="sidebar">
+      <h1>fieldkit</h1>
+      <button class="nav-btn active" data-tab="surveys" id="nav-surveys">Surveys</button>
+      <button class="nav-btn" data-tab="author" id="nav-author">Author</button>
+      <button class="nav-btn" data-tab="respond" id="nav-respond">Respondent</button>
+      <button class="nav-btn" data-tab="responses" id="nav-responses">Responses</button>
+      <button class="nav-btn" data-tab="migrate" id="nav-migrate">Migrate</button>
+      <button class="nav-btn" data-tab="plugin" id="nav-plugin">Plugin</button>
+      <button class="nav-btn" data-tab="donate" id="nav-donate">Donate</button>
+      <button class="nav-btn" id="wizard-btn">Help: open wizard</button>
+      <div id="version-line"></div>
+    </nav>
+
+    <main>
+      <!-- Surveys list -->
+      <section id="tab-surveys" class="tab active">
+        <h2>Surveys</h2>
+        <div id="surveys-empty" class="empty hidden">No surveys yet. Run the wizard (Help: open wizard) or create one in the Author tab.</div>
+        <table id="surveys-table" class="hidden">
+          <thead><tr><th>id</th><th>name</th><th>responses</th><th>created</th><th></th></tr></thead>
+          <tbody id="surveys-body"></tbody>
+        </table>
+        <p class="loading hidden" id="surveys-loading">loading…</p>
+      </section>
+
+      <!-- Author -->
+      <section id="tab-author" class="tab">
+        <h2>Author a survey</h2>
+        <p class="hint">Surveys are JSON: questions (text, single_choice, multi_choice, rating, nps), required, hidden, and logic rules (show/jump).</p>
+        <input id="author-name" type="text" placeholder="Survey name" />
+        <textarea id="author-json" rows="16" spellcheck="false"></textarea>
+        <div class="row">
+          <button id="author-create" class="primary">Create survey</button>
+          <button id="author-load-sample">Load branch fixture</button>
+          <span id="author-status" class="status"></span>
+        </div>
+      </section>
+
+      <!-- Respondent runner -->
+      <section id="tab-respond" class="tab">
+        <h2>Respondent runner</h2>
+        <div class="row">
+          <select id="respond-survey"></select>
+          <button id="respond-reload">Reload</button>
+        </div>
+        <div id="respond-form"></div>
+        <div class="row">
+          <button id="respond-preview">Preview logic</button>
+          <button id="respond-submit" class="primary">Submit response</button>
+        </div>
+        <pre id="respond-result" class="result"></pre>
+      </section>
+
+      <!-- Responses table -->
+      <section id="tab-responses" class="tab">
+        <h2>Responses</h2>
+        <div class="row">
+          <select id="responses-survey"></select>
+          <button id="responses-reload">Reload</button>
+          <button id="responses-csv">Download CSV</button>
+        </div>
+        <div id="responses-empty" class="empty hidden">No responses for this survey yet.</div>
+        <table id="responses-table" class="hidden">
+          <thead id="responses-head"></thead>
+          <tbody id="responses-body"></tbody>
+        </table>
+      </section>
+
+      <!-- Migrate dry-run -->
+      <section id="tab-migrate" class="tab">
+        <h2>Migrate dry-run</h2>
+        <div class="row">
+          <input id="migrate-input" type="text" placeholder="path to Typeform export JSON" />
+          <button id="migrate-pick">Browse…</button>
+          <button id="migrate-sample" class="primary">Use sample export</button>
+        </div>
+        <div class="row">
+          <button id="migrate-run" class="primary">Run dry-run</button>
+          <span id="migrate-status" class="status"></span>
+        </div>
+        <pre id="migrate-result" class="result"></pre>
+      </section>
+
+      <!-- Plugin -->
+      <section id="tab-plugin" class="tab">
+        <h2>Plugin contract</h2>
+        <p class="hint">Validate a plugin manifest (api_version 1). The sample plugin ships in the repo under testdata/plugins/sample.</p>
+        <div class="row">
+          <input id="plugin-input" type="text" placeholder="plugin directory or manifest.json" />
+          <button id="plugin-pick">Browse…</button>
+          <button id="plugin-validate" class="primary">Validate</button>
+        </div>
+        <pre id="plugin-result" class="result"></pre>
+      </section>
+
+      <!-- Donate -->
+      <section id="tab-donate" class="tab">
+        <h2>Donate</h2>
+        <p>Fieldkit is free to self-host. There is no paid tier, no subscription, no invoice, and no feature gated on money — there never will be.</p>
+        <div class="address-block">
+          <h3>Ethereum / USDC (ERC-20)</h3>
+          <div class="row">
+            <code id="donate-eth"></code>
+            <button id="copy-eth">Copy</button>
+          </div>
+        </div>
+        <div class="address-block">
+          <h3>Bitcoin</h3>
+          <div class="row">
+            <code id="donate-btc"></code>
+            <button id="copy-btc">Copy</button>
+          </div>
+        </div>
+        <p class="hint">No other wallet addresses are associated with this project. `fieldkit donate` prints the same addresses.</p>
+      </section>
+
+      <footer id="app-footer">
+        <span>fieldkit <span id="footer-version"></span> — donation-only, MIT. </span>
+        <span id="footer-donate-short"></span>
+      </footer>
+    </main>
+  </div>
+
+  <!-- First-run wizard -->
+  <div id="wizard-overlay" class="hidden">
+    <div id="wizard-card">
+      <h2 id="wizard-title"></h2>
+      <p id="wizard-body"></p>
+      <div id="wizard-fields"></div>
+      <pre id="wizard-result" class="result"></pre>
+      <div class="row wizard-nav">
+        <button id="wizard-back">Back</button>
+        <button id="wizard-next" class="primary">Next</button>
+        <button id="wizard-skip">Skip wizard</button>
+      </div>
+      <div id="wizard-progress"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script src="wizard.js"></script>
+  <script src="testbridge.js"></script>
+</body>
+</html>

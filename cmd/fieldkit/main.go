@@ -41,6 +41,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return cmdVersion(stdout)
 	case "donate":
 		return cmdDonate(rest, stdout, stderr)
+	case "desktop":
+		return launchDesktop(rest, stdout, stderr)
 	case "surveys":
 		return cmdSurveys(rest, stdout, stderr)
 	case "logic":

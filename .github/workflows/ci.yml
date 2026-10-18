@@ -1,0 +1,49 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.27"
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+      - name: vet
+        run: go vet ./...
+      - name: test (race on the concurrent packages)
+        run: go test -race ./internal/store/ ./internal/serve/
+      - name: test (all)
+        run: go test ./...
+      - name: build
+        run: go build -o fieldkit ./cmd/fieldkit
+      # Migrate fixture gate: the dry-run report on the committed
+      # Typeform fixture must stay machine-stable.
+      - name: migrate fixture gate (typeform)
+        run: |
+          ./fieldkit migrate --from=typeform --dry-run --format=json \
+            --input testdata/fixtures/typeform/sample-export.json > /tmp/report.json
+          jq -e '.source=="typeform" and .dry_run==true
+                 and (.survey.questions | length)==4
+                 and (.unmapped | length)==3
+                 and (.endings | length)==1
+                 and (.survey.logic | length)==1' /tmp/report.json
+      # Plugin contract gate: the sample plugin must pass or the build fails.
+      - name: plugin contract gate
+        run: ./fieldkit plugin validate testdata/plugins/sample
+      # Donate-exact gate: both addresses byte-for-byte, exactly once each.
+      - name: donate exact gate
+        run: |
+          ./fieldkit donate > /tmp/donate.txt
+          grep -Fx 'Ethereum / USDC (ERC-20): 0x85ee7E71f762d772599cbF1EC20E651B30657521' /tmp/donate.txt
+          grep -Fx 'Bitcoin:                  bc1qxe2zx5tv3hdreaej6s2x4p7han85uey828rrhg' /tmp/donate.txt
+      # Logic fixture gate: the branch fixture's evaluation is stable.
+      - name: logic fixture gate
+        run: |
+          ./fieldkit logic --survey testdata/logic/branch.json \
+            --answers <(echo '{"q1":"no","q2":"x","q3":"y"}') --format=json > /tmp/logic.json
+          jq -e '(.visible_questions | length)==3 and (.errors | length)==0' /tmp/logic.json

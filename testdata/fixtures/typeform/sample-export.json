@@ -1,0 +1,80 @@
+{
+  "form": {
+    "id": "AbCdEf01",
+    "title": "Customer feedback",
+    "workspace": { "id": "w1", "name": "Acme" }
+  },
+  "fields": [
+    {
+      "id": "f1",
+      "ref": "welcome_ref",
+      "title": "Welcome",
+      "type": "statement",
+      "properties": {}
+    },
+    {
+      "id": "f2",
+      "ref": "name_ref",
+      "title": "What is your name?",
+      "type": "short_text",
+      "properties": { "required": true },
+      "validations": { "required": true }
+    },
+    {
+      "id": "f3",
+      "ref": "satisfaction_ref",
+      "title": "How satisfied are you?",
+      "type": "opinion_scale",
+      "properties": { "steps": 5, "start_at_one": false },
+      "validations": { "required": true }
+    },
+    {
+      "id": "f4",
+      "ref": "recommend_ref",
+      "title": "Would you recommend us?",
+      "type": "yes_no",
+      "properties": {}
+    },
+    {
+      "id": "f5",
+      "ref": "improve_ref",
+      "title": "What should we improve?",
+      "type": "long_text",
+      "properties": {},
+      "validations": { "required": false }
+    },
+    {
+      "id": "f6",
+      "ref": "source_ref",
+      "title": "Hidden utm_source",
+      "type": "hidden",
+      "properties": {}
+    },
+    {
+      "id": "f7",
+      "ref": "matrix_ref",
+      "title": "Rate these areas",
+      "type": "matrix",
+      "properties": {
+        "rows": ["Speed", "Support"],
+        "columns": ["Bad", "Ok", "Good"]
+      }
+    }
+  ],
+  "logic": [
+    {
+      "id": "L1",
+      "type": "field",
+      "from": "recommend_ref",
+      "conditions": {
+        "op": "equal",
+        "vars": [ { "type": "field", "value": "recommend_ref" }, { "type": "constant", "value": "false" } ]
+      },
+      "actions": [ { "type": "jump", "to": "improve_ref" } ]
+    }
+  ],
+  "endings": [
+    { "id": "e1", "ref": "default_end", "type": "thankyou", "title": "Thanks!" }
+  ],
+  "variables": []
+}

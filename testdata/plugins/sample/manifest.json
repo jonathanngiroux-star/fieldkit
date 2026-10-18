@@ -1,0 +1,8 @@
+{
+  "api_version": 1,
+  "name": "sample",
+  "version": "1.0.0",
+  "kind": "question_type",
+  "description": "Sample in-repo plugin: a slider question type rendered by the host.",
+  "entrypoint": "sample.js"
+}

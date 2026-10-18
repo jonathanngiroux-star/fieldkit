@@ -9,7 +9,7 @@ import (
 // response, formula-injection-safe values, RFC3339 timestamps.
 func TestCSVExport(t *testing.T) {
 	s := mustOpen(t, t.TempDir())
-	err := s.CreateSurvey("s", map[string]any{
+	_, err := s.CreateSurvey("s", map[string]any{
 		"title": "s",
 		"questions": []any{
 			map[string]any{"id": "q1", "type": "text", "title": "Name"},
@@ -21,10 +21,10 @@ func TestCSVExport(t *testing.T) {
 	}
 	list, _ := s.ListSurveys()
 	id := list[0].ID
-	if err := s.SaveResponse(id, map[string]any{"q1": "=SUM(A1:A2)", "q2": 4.0}, "agent"); err != nil {
+	if _, err := s.SaveResponse(id, map[string]any{"q1": "=SUM(A1:A2)", "q2": 4.0}, "agent"); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.SaveResponse(id, map[string]any{"q1": `say "hi", ok`, "q2": 5.0}, "agent"); err != nil {
+	if _, err := s.SaveResponse(id, map[string]any{"q1": `say "hi", ok`, "q2": 5.0}, "agent"); err != nil {
 		t.Fatal(err)
 	}
 	csv, err := s.ExportCSV(id)

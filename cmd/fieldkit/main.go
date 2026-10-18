@@ -181,22 +181,12 @@ func cmdSurveysCreate(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	defer st.Close()
-	if err := st.CreateSurvey(*name, def); err != nil {
+	newID, err := st.CreateSurvey(*name, def)
+	if err != nil {
 		fmt.Fprintf(stderr, "create survey: %v\n", err)
 		return 1
 	}
-	list, err := st.ListSurveys()
-	if err != nil {
-		fmt.Fprintf(stderr, "list surveys: %v\n", err)
-		return 1
-	}
-	var id int64
-	for _, si := range list {
-		if si.Name == *name {
-			id = si.ID
-		}
-	}
-	fmt.Fprintf(stdout, "created survey %d %q\n", id, *name)
+	fmt.Fprintf(stdout, "created survey %d %q\n", newID, *name)
 	return 0
 }
 

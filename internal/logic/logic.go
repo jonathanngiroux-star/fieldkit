@@ -197,6 +197,25 @@ func Parse(raw []byte) (*Survey, error) {
 			}
 		}
 	}
+	// Orphan hidden questions: a hidden question no show rule can ever
+	// reveal is dead authoring state — reject at parse.
+	revealable := map[string]bool{}
+	for _, r := range s.Logic {
+		if r.Then.Action == ActionShow {
+			revealable[r.Then.Question] = true
+		}
+	}
+	for _, q := range s.Questions {
+		if q.Hidden && !revealable[q.ID] {
+			return nil, fmt.Errorf("question %q is hidden but no show rule can reveal it", q.ID)
+		}
+	}
+	// Numeric range sanity.
+	for _, q := range s.Questions {
+		if q.Min != nil && q.Max != nil && *q.Min > *q.Max {
+			return nil, fmt.Errorf("question %q: min %v exceeds max %v", q.ID, *q.Min, *q.Max)
+		}
+	}
 	if cycle := findCycle(edges); cycle != "" {
 		return nil, fmt.Errorf("show-rule cycle through question %q", cycle)
 	}

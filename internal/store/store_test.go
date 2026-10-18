@@ -33,7 +33,7 @@ func mustOpen(t *testing.T, dir string) *Store {
 // Creating a survey persists it and lists it.
 func TestCreateListSurveys(t *testing.T) {
 	s := mustOpen(t, t.TempDir())
-	if err := s.CreateSurvey("NPS survey", map[string]any{
+	if _, err := s.CreateSurvey("NPS survey", map[string]any{
 		"title": "NPS survey",
 		"questions": []any{
 			map[string]any{"id": "q1", "type": "nps", "title": "How likely?", "required": true},
@@ -62,7 +62,7 @@ func TestSurveyJSONRoundTrip(t *testing.T) {
 			map[string]any{"id": "q1", "type": "text", "title": "Name?"},
 		},
 	}
-	if err := s.CreateSurvey("s1", def); err != nil {
+	if _, err := s.CreateSurvey("s1", def); err != nil {
 		t.Fatal(err)
 	}
 	list, _ := s.ListSurveys()
@@ -78,12 +78,15 @@ func TestSurveyJSONRoundTrip(t *testing.T) {
 // Responses persist with submission time and retrieve in order.
 func TestSubmitResponses(t *testing.T) {
 	s := mustOpen(t, t.TempDir())
-	if err := s.CreateSurvey("s", map[string]any{"title": "s", "questions": []any{}}); err != nil {
+	if _, err := s.CreateSurvey("s", map[string]any{
+		"title":     "s",
+		"questions": []any{map[string]any{"id": "q1", "type": "text", "title": "x"}},
+	}); err != nil {
 		t.Fatal(err)
 	}
 	list, _ := s.ListSurveys()
 	id := list[0].ID
-	if err := s.SaveResponse(id, map[string]any{"q1": "yes"}, "test-agent"); err != nil {
+	if _, err := s.SaveResponse(id, map[string]any{"q1": "yes"}, "test-agent"); err != nil {
 		t.Fatal(err)
 	}
 	rows, err := s.Responses(id)

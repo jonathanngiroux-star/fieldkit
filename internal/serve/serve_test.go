@@ -35,7 +35,7 @@ func newServer(t *testing.T) (*httptest.Server, *store.Store, int64) {
 	if err := json.Unmarshal([]byte(branchFixture), &def); err != nil {
 		t.Fatal(err)
 	}
-	if err := st.CreateSurvey("fixture", def); err != nil {
+	if _, err := st.CreateSurvey("fixture", def); err != nil {
 		t.Fatal(err)
 	}
 	list, err := st.ListSurveys()
@@ -186,4 +186,13 @@ func TestSubmitWrongContentType(t *testing.T) {
 	if resp.StatusCode != http.StatusUnsupportedMediaType {
 		t.Fatalf("status %d, want 415", resp.StatusCode)
 	}
+}
+
+// decodeJSON reads a JSON body into v (test helper).
+func decodeJSON(r interface{ Read(p []byte) (int, error) }, v any) error {
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, v)
 }

@@ -108,16 +108,12 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 	if len(agent) > 200 {
 		agent = agent[:200]
 	}
-	if err := h.store.SaveResponse(id, keep, agent); err != nil {
+	respID, err := h.store.SaveResponse(id, keep, agent)
+	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "store response: "+err.Error())
 		return
 	}
-	var maxID int64
-	rows, err := h.store.Responses(id)
-	if err == nil && len(rows) > 0 {
-		maxID = rows[len(rows)-1].ID
-	}
-	writeJSON(w, http.StatusCreated, map[string]any{"response_id": maxID})
+	writeJSON(w, http.StatusCreated, map[string]any{"response_id": respID})
 }
 
 // surveyView returns the respondent-visible survey: questions with

@@ -15,6 +15,8 @@ import (
 	"time"
 
 	_ "modernc.org/sqlite"
+
+	"github.com/jonathanngiroux-star/fieldkit/internal/logic"
 )
 
 // Store wraps the SQLite database file under a data directory.
@@ -96,27 +98,31 @@ func (s *Store) Close() error { return s.db.Close() }
 func (s *Store) Path() string { return s.path }
 
 // CreateSurvey stores a survey definition under a human name. The
-// definition is canonicalized (sorted keys) so byte-stable comparisons
-// work in tests and CI.
-func (s *Store) CreateSurvey(name string, def map[string]any) error {
+// definition is validated with the same logic engine that runs at
+// submit time — a survey that cannot run never enters the DB. Returns
+// the new survey id.
+func (s *Store) CreateSurvey(name string, def map[string]any) (int64, error) {
 	if name == "" {
-		return fmt.Errorf("survey name required")
+		return 0, fmt.Errorf("survey name required")
 	}
 	if def == nil {
-		return fmt.Errorf("survey definition required")
+		return 0, fmt.Errorf("survey definition required")
 	}
 	raw, err := json.Marshal(def)
 	if err != nil {
-		return fmt.Errorf("marshal definition: %w", err)
+		return 0, fmt.Errorf("marshal definition: %w", err)
 	}
-	_, err = s.db.Exec(
+	if _, err := logic.Parse(raw); err != nil {
+		return 0, fmt.Errorf("invalid survey definition: %w", err)
+	}
+	res, err := s.db.Exec(
 		`INSERT INTO surveys (name, definition, created_nanos) VALUES (?, ?, ?)`,
 		name, string(raw), time.Now().UnixNano(),
 	)
 	if err != nil {
-		return fmt.Errorf("insert survey: %w", err)
+		return 0, fmt.Errorf("insert survey: %w", err)
 	}
-	return nil
+	return res.LastInsertId()
 }
 
 // ListSurveys returns all surveys, oldest first.
@@ -168,32 +174,33 @@ func (s *Store) DeleteSurvey(id int64) error {
 	return nil
 }
 
-// SaveResponse stores one response. Answers are canonicalized to JSON.
-func (s *Store) SaveResponse(surveyID int64, answers map[string]any, agent string) error {
+// SaveResponse stores one response and returns the inserted response id.
+// Answers are canonicalized to JSON.
+func (s *Store) SaveResponse(surveyID int64, answers map[string]any, agent string) (int64, error) {
 	if answers == nil {
 		answers = map[string]any{}
 	}
 	raw, err := json.Marshal(answers)
 	if err != nil {
-		return fmt.Errorf("marshal answers: %w", err)
+		return 0, fmt.Errorf("marshal answers: %w", err)
 	}
 	var exists int
 	err = s.db.QueryRow(`SELECT 1 FROM surveys WHERE id = ?`, surveyID).Scan(&exists)
 	if err == sql.ErrNoRows {
-		return fmt.Errorf("survey %d not found", surveyID)
+		return 0, fmt.Errorf("survey %d not found", surveyID)
 	}
 	if err != nil {
-		return fmt.Errorf("check survey: %w", err)
+		return 0, fmt.Errorf("check survey: %w", err)
 	}
-	_, err = s.db.Exec(
+	res, err := s.db.Exec(
 		`INSERT INTO responses (survey_id, answers, submitted_nanos, agent)
 		 VALUES (?, ?, ?, ?)`,
 		surveyID, string(raw), time.Now().UnixNano(), agent,
 	)
 	if err != nil {
-		return fmt.Errorf("insert response: %w", err)
+		return 0, fmt.Errorf("insert response: %w", err)
 	}
-	return nil
+	return res.LastInsertId()
 }
 
 // Responses returns a survey's responses, oldest first.

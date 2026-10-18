@@ -1,6 +1,8 @@
 package main
 
 import (
+	fieldapp "github.com/jonathanngiroux-star/fieldkit/internal/app"
+
 	"os"
 	"strings"
 	"testing"
@@ -8,23 +10,23 @@ import (
 	"github.com/jonathanngiroux-star/fieldkit/internal/store"
 )
 
-func openTUIModel(t *testing.T) *appModel {
+func openTUIModel(t *testing.T) (*fieldapp.Model, *store.Store) {
 	t.Helper()
 	st, err := store.Open(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { st.Close() })
-	return newAppModel(st)
+	return fieldapp.New(st), st
 }
 
 // The TUI's main view data: survey list with response counts.
 func TestTUISurveyListView(t *testing.T) {
-	m := openTUIModel(t)
-	if _, err := wizardRunStep(m, "import", map[string]string{}); err != nil {
+	m, _ := openTUIModel(t)
+	if _, err := fieldapp.WizardRunStep(m, "import", map[string]string{}); err != nil {
 		t.Fatal(err)
 	}
-	lines, err := m.tuiSurveyList()
+	lines, err := m.TUISurveyList()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,12 +46,12 @@ func TestTUISurveyListView(t *testing.T) {
 
 // The TUI's logic dry-run view: same engine, same fixture, text shape.
 func TestTUILogicDryRun(t *testing.T) {
-	m := openTUIModel(t)
-	if _, err := wizardRunStep(m, "import", map[string]string{}); err != nil {
+	m, st := openTUIModel(t)
+	if _, err := fieldapp.WizardRunStep(m, "import", map[string]string{}); err != nil {
 		t.Fatal(err)
 	}
-	list, _ := m.st.ListSurveys()
-	out, err := m.tuiLogicDryRun(list[0].ID, `{"q1":"no","q2":"broken","q3":"ok"}`)
+	list, _ := st.ListSurveys()
+	out, err := m.TUILogicDryRun(list[0].ID, `{"q1":"no","q2":"broken","q3":"ok"}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +62,7 @@ func TestTUILogicDryRun(t *testing.T) {
 		t.Fatalf("verdict missing: %q", out)
 	}
 	// invalid: required q1 missing
-	out, err = m.tuiLogicDryRun(list[0].ID, `{"q3":"x"}`)
+	out, err = m.TUILogicDryRun(list[0].ID, `{"q3":"x"}`)
 	if err == nil || !strings.Contains(out, "q1") {
 		t.Fatalf("required error must name q1: %q err=%v", out, err)
 	}
@@ -68,12 +70,12 @@ func TestTUILogicDryRun(t *testing.T) {
 
 // The TUI's migrate summary: text form of the same report.
 func TestTUIMigrateSummary(t *testing.T) {
-	m := openTUIModel(t)
+	m, _ := openTUIModel(t)
 	path := t.TempDir() + "/tf.json"
-	if err := writeFile(path, sampleTypeformExport); err != nil {
+	if err := writeFile(path, fieldapp.SampleTypeformExport); err != nil {
 		t.Fatal(err)
 	}
-	out, err := m.tuiMigrateSummary(path)
+	out, err := m.TUIMigrateSummary(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,24 +89,24 @@ func TestTUIMigrateSummary(t *testing.T) {
 
 // The TUI donate view text: both addresses, exact.
 func TestTUIDonateView(t *testing.T) {
-	m := openTUIModel(t)
-	out := m.tuiDonate()
+	m, _ := openTUIModel(t)
+	out := m.TUIDonate()
 	if !strings.Contains(out, "0x85ee7E71f762d772599cbF1EC20E651B30657521") ||
 		!strings.Contains(out, "bc1qxe2zx5tv3hdreaej6s2x4p7han85uey828rrhg") {
 		t.Fatalf("donate view missing addresses: %q", out)
 	}
 }
 
-// The TUI wizard is the shared wizardSteps/wizardRunStep — zero TUI-only
+// The TUI wizard is the shared fieldapp.WizardSteps/fieldapp.WizardRunStep — zero TUI-only
 // logic. This pins that the same steps run in both renderers.
 func TestTUIWizardSharesSteps(t *testing.T) {
-	m := openTUIModel(t)
+	m, _ := openTUIModel(t)
 	// import through the shared runner (as the TUI wizard does)
-	out, err := wizardRunStep(m, "import", map[string]string{})
+	out, err := fieldapp.WizardRunStep(m, "import", map[string]string{})
 	if err != nil || !strings.Contains(out, "imported") {
 		t.Fatalf("TUI wizard import: %q %v", out, err)
 	}
-	seen := m.wizardSeen()
+	seen := m.WizardSeen()
 	if seen {
 		t.Fatal("import alone must not mark the wizard seen")
 	}

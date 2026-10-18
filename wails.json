@@ -1,0 +1,18 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "fieldkit",
+  "outputfilename": "fieldkit-desktop",
+  "frontend:install": "",
+  "frontend:build": "",
+  "frontend:dev:watcher": "",
+  "frontend:dev:serverUrl": "",
+  "author": {
+    "name": "Jonathann Giroux"
+  },
+  "info": {
+    "productName": "fieldkit",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright 2026 Jonathann Giroux",
+    "comments": "Self-hosted form and survey backend with a plugin contract and a Typeform migration CLI. Donation-only; see docs/donate.md."
+  }
+}

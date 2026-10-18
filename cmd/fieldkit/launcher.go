@@ -4,6 +4,8 @@ package main
 // terminal; pipes/CI never hang — they get a hint and exit.
 
 import (
+	fieldapp "github.com/jonathanngiroux-star/fieldkit/internal/app"
+
 	"flag"
 	"fmt"
 	"io"
@@ -31,7 +33,7 @@ func launchTUI(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if *dataDir == "" {
-		*dataDir = defaultDataDir()
+		*dataDir = fieldapp.DefaultDataDir()
 	}
 	if !isTerminal(os.Stdin) || !isTerminal(os.Stdout) {
 		fmt.Fprintln(stderr, "fieldkit: the TUI needs an interactive terminal.")
@@ -46,5 +48,5 @@ func launchTUI(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	defer st.Close()
-	return runTUI(newAppModel(st))
+	return runTUI(fieldapp.New(st))
 }

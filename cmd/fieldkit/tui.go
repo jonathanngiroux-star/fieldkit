@@ -1,12 +1,14 @@
 package main
 
 // tui.go: the terminal UI. tview/tcell is pure Go (no cgo), so the TUI
-// ships in the default cgo-free binary. All logic lives on appModel;
+// ships in the default cgo-free binary. All logic lives on fieldapp.Model;
 // this file only renders. Keyboard-first: q quits, w opens the wizard,
 // Tab/Enter traverse forms, 1-4 switch sections, e/b copy the donate
 // addresses on the donate page.
 
 import (
+	fieldapp "github.com/jonathanngiroux-star/fieldkit/internal/app"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -14,7 +16,7 @@ import (
 // buildMainScreen constructs the main screen (nav + pages + footer and
 // the global key handlers). runTUI runs it; tests drive it on a sim
 // screen with the same handlers.
-func buildMainScreen(m *appModel, app *tview.Application) (tview.Primitive, func()) {
+func buildMainScreen(m *fieldapp.Model, app *tview.Application) (tview.Primitive, func()) {
 
 	output := tview.NewTextView().
 		SetDynamicColors(true).
@@ -25,7 +27,7 @@ func buildMainScreen(m *appModel, app *tview.Application) (tview.Primitive, func
 	surveyList := tview.NewList().ShowSecondaryText(false)
 	refillSurveys := func() {
 		surveyList.Clear()
-		lines, err := m.tuiSurveyList()
+		lines, err := m.TUISurveyList()
 		if err != nil {
 			surveyList.AddItem("[red]"+err.Error(), "", 0, nil)
 			return
@@ -42,7 +44,7 @@ func buildMainScreen(m *appModel, app *tview.Application) (tview.Primitive, func
 	logicForm.AddInputField("answers JSON", `{"q1":"no","q2":"x","q3":"y"}`, 48, nil, nil)
 	logicForm.AddButton("Dry-run", func() {
 		id := parseID(logicForm.GetFormItem(0).(*tview.InputField).GetText())
-		out, err := m.tuiLogicDryRun(id, logicForm.GetFormItem(1).(*tview.InputField).GetText())
+		out, err := m.TUILogicDryRun(id, logicForm.GetFormItem(1).(*tview.InputField).GetText())
 		if err != nil {
 			output.SetText("[red]" + out)
 			return
@@ -55,7 +57,7 @@ func buildMainScreen(m *appModel, app *tview.Application) (tview.Primitive, func
 	migrateForm := tview.NewForm()
 	migrateForm.AddInputField("typeform export path", "", 48, nil, nil)
 	migrateForm.AddButton("Use bundled sample", func() {
-		path, err := sampleFixturePath()
+		path, err := fieldapp.SampleFixturePath()
 		if err != nil {
 			output.SetText("[red]" + err.Error())
 			return
@@ -63,7 +65,7 @@ func buildMainScreen(m *appModel, app *tview.Application) (tview.Primitive, func
 		migrateForm.GetFormItem(0).(*tview.InputField).SetText(path)
 	})
 	migrateForm.AddButton("Dry-run", func() {
-		out, err := m.tuiMigrateSummary(migrateForm.GetFormItem(0).(*tview.InputField).GetText())
+		out, err := m.TUIMigrateSummary(migrateForm.GetFormItem(0).(*tview.InputField).GetText())
 		if err != nil {
 			output.SetText("[red]" + err.Error())
 			return
@@ -74,7 +76,7 @@ func buildMainScreen(m *appModel, app *tview.Application) (tview.Primitive, func
 
 	// ---------- donate page ----------
 	donateText := tview.NewTextView().SetDynamicColors(true)
-	donateText.SetText(m.tuiDonate())
+	donateText.SetText(m.TUIDonate())
 	donateStatus := tview.NewTextView().SetDynamicColors(true)
 	setDonateHint := func() {
 		donateStatus.SetText("[gray]e = copy ETH/USDC · b = copy Bitcoin · q = quit[-:]")
@@ -109,7 +111,7 @@ func buildMainScreen(m *appModel, app *tview.Application) (tview.Primitive, func
 
 	// donate footer — visible on every page, per the donation rule
 	donateFooter := tview.NewTextView().SetDynamicColors(true)
-	donateFooter.SetText("[gray]free forever · donate: ETH/USDC " + donateEthereum + " · BTC " + donateBitcoin + "[-:]")
+	donateFooter.SetText("[gray]free forever · donate: ETH/USDC " + fieldapp.DonateEthereum + " · BTC " + fieldapp.DonateBitcoin + "[-:]")
 
 	nav := tview.NewList().ShowSecondaryText(false)
 	sections := []struct {
@@ -160,12 +162,12 @@ func buildMainScreen(m *appModel, app *tview.Application) (tview.Primitive, func
 				return nil
 			case 'e', 'E':
 				if activePage == "donate" {
-					copyDonate(donateEthereum)
+					copyDonate(fieldapp.DonateEthereum)
 					return nil
 				}
 			case 'b', 'B':
 				if activePage == "donate" {
-					copyDonate(donateBitcoin)
+					copyDonate(fieldapp.DonateBitcoin)
 					return nil
 				}
 			case '1', '2', '3', '4':
@@ -186,13 +188,13 @@ func buildMainScreen(m *appModel, app *tview.Application) (tview.Primitive, func
 
 // runTUI builds and runs the terminal UI. Requires a TTY (checked by
 // the launcher, not here).
-func runTUI(m *appModel) int {
+func runTUI(m *fieldapp.Model) int {
 	app := tview.NewApplication()
 	rootRow, openWizard := buildMainScreen(m, app)
 	app.SetRoot(rootRow, true)
 
 	// first run: the wizard opens before the main screen
-	if !m.wizardSeen() {
+	if !m.WizardSeen() {
 		go func() {
 			// let the app paint first, then overlay
 			app.QueueUpdateDraw(func() { openWizard() })

@@ -18,7 +18,7 @@
 /NN-*.md
 
 # wails
-/frontend/dist/-na
+/build/
 node_modules/
 *.log
 

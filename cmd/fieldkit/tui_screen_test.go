@@ -4,9 +4,11 @@ package main
 // a simulated tcell screen — real tview app, real key events, no
 // terminal. Buttons are focused directly (tview forms have many focus
 // stops; guessing Tab counts is flaky), then pressed with Enter — the
-// handler chain (button -> run -> wizardRunStep -> store) is fully real.
+// handler chain (button -> run -> fieldapp.WizardRunStep -> store) is fully real.
 
 import (
+	fieldapp "github.com/jonathanngiroux-star/fieldkit/internal/app"
+
 	"strings"
 	"testing"
 	"time"
@@ -19,7 +21,7 @@ import (
 
 // runWizardOnScreen mounts the wizard on a sim screen with the app's
 // draw loop running, drives the script, returns the final screen text.
-func runWizardOnScreen(t *testing.T, m *appModel, script func(app *tview.Application, w *tuiWizard, screen tcell.SimulationScreen)) string {
+func runWizardOnScreen(t *testing.T, m *fieldapp.Model, script func(app *tview.Application, w *tuiWizard, screen tcell.SimulationScreen)) string {
 	t.Helper()
 	screen := tcell.NewSimulationScreen("")
 	if err := screen.Init(); err != nil {
@@ -105,7 +107,7 @@ func TestTUIWizardScriptedKeys(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer st.Close()
-	m := newAppModel(st)
+	m := fieldapp.New(st)
 
 	runWizardOnScreen(t, m, func(app *tview.Application, w *tuiWizard, screen tcell.SimulationScreen) {
 		// step 0 data: Next
@@ -157,11 +159,11 @@ func TestTUIWizardPagesRender(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer st.Close()
-	m := newAppModel(st)
+	m := fieldapp.New(st)
 
 	// Pass 1: step through every page; each must leave its title on
 	// screen (a page that fails to draw shows blank/previous content).
-	for i := range wizardSteps() {
+	for i := range fieldapp.WizardSteps() {
 		idx := i
 		text := runWizardOnScreen(t, m, func(app *tview.Application, w *tuiWizard, screen tcell.SimulationScreen) {
 			app.QueueUpdateDraw(func() {
@@ -183,14 +185,14 @@ func TestTUIWizardPagesRender(t *testing.T) {
 		})
 		time.Sleep(300 * time.Millisecond)
 	})
-	if !strings.Contains(text, donateEthereum) || !strings.Contains(text, donateBitcoin) {
+	if !strings.Contains(text, fieldapp.DonateEthereum) || !strings.Contains(text, fieldapp.DonateBitcoin) {
 		t.Fatalf("donate step missing addresses:\n%s", text)
 	}
 }
 
-// wsteps is wizardSteps via the shared constructor (kept separate so
+// wsteps is fieldapp.WizardSteps via the shared constructor (kept separate so
 // the test reads clearly).
-func wsteps() []wizardStep { return wizardSteps() }
+func wsteps() []fieldapp.WizardStep { return fieldapp.WizardSteps() }
 
 // Back/Next navigation via keys: Next then Prev returns to step 1's
 // title on screen.
@@ -201,7 +203,7 @@ func TestTUIWizardBackNext(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer st.Close()
-	m := newAppModel(st)
+	m := fieldapp.New(st)
 
 	text := runWizardOnScreen(t, m, func(app *tview.Application, w *tuiWizard, screen tcell.SimulationScreen) {
 		pressButton(app, w, screen, 0, "Next")
@@ -221,13 +223,13 @@ func TestTUIWizardSkipMarksSeen(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer st.Close()
-	m := newAppModel(st)
+	m := fieldapp.New(st)
 
 	runWizardOnScreen(t, m, func(app *tview.Application, w *tuiWizard, screen tcell.SimulationScreen) {
 		pressButton(app, w, screen, 0, "Skip tour")
 		time.Sleep(200 * time.Millisecond)
 	})
-	if !m.wizardSeen() {
+	if !m.WizardSeen() {
 		t.Fatal("skip must mark the wizard seen")
 	}
 }

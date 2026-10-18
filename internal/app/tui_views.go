@@ -1,7 +1,7 @@
-package main
+package app
 
-// tui_model.go: text views for the TUI. Same logic layer as the GUI
-// (appModel); these are pure formatting functions over it — a view can
+// tui_views.go: text views for the TUI. Same logic layer as the GUI
+// (Model); these are pure formatting functions over it — a view can
 // be tested without a screen.
 
 import (
@@ -11,8 +11,8 @@ import (
 )
 
 // tuiSurveyList renders the surveys table as text lines: header first.
-func (m *appModel) tuiSurveyList() ([]string, error) {
-	infos, err := m.surveySummaries()
+func (m *Model) TUISurveyList() ([]string, error) {
+	infos, err := m.SurveySummaries()
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +25,7 @@ func (m *appModel) tuiSurveyList() ([]string, error) {
 
 // tuiLogicDryRun evaluates answers against a stored survey and renders
 // the result as text (same engine as submit/CI).
-func (m *appModel) tuiLogicDryRun(surveyID int64, answersJSON string) (string, error) {
+func (m *Model) TUILogicDryRun(surveyID int64, answersJSON string) (string, error) {
 	var answers map[string]any
 	if strings.TrimSpace(answersJSON) != "" {
 		if err := json.Unmarshal([]byte(answersJSON), &answers); err != nil {
@@ -53,8 +53,8 @@ func (m *appModel) tuiLogicDryRun(surveyID int64, answersJSON string) (string, e
 }
 
 // tuiMigrateSummary renders the dry-run report counts as text.
-func (m *appModel) tuiMigrateSummary(input string) (string, error) {
-	repJSON, err := m.migrateDryRun("typeform", input)
+func (m *Model) TUIMigrateSummary(input string) (string, error) {
+	repJSON, err := m.MigrateDryRun("typeform", input)
 	if err != nil {
 		return "", err
 	}
@@ -89,12 +89,12 @@ func (m *appModel) tuiMigrateSummary(input string) (string, error) {
 }
 
 // tuiDonate renders the donate text (both addresses, exact).
-func (m *appModel) tuiDonate() string {
+func (m *Model) TUIDonate() string {
 	return "Fieldkit is free to self-host. There is no paid tier, no\n" +
 		"subscription, no invoice, and no feature gated on money — there\n" +
 		"never will be. Donations welcome:\n\n" +
-		"Ethereum / USDC (ERC-20): " + donateEthereum + "\n" +
-		"Bitcoin:                  " + donateBitcoin + "\n\n" +
+		"Ethereum / USDC (ERC-20): " + DonateEthereum + "\n" +
+		"Bitcoin:                  " + DonateBitcoin + "\n\n" +
 		"No other wallets are associated with this project.\n" +
 		"e = copy ETH/USDC · b = copy Bitcoin"
 }

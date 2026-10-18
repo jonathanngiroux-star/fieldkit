@@ -1,6 +1,17 @@
 // app.js: fieldkit desktop frontend (vanilla JS, no bundler). All logic
 // lives in the Go bindings; this file renders and calls.
 (function () {
+// bindings(): Wails namespaces generated bindings by the bound struct's
+// package name. fieldkit binds internal/desktop.DesktopApp, so the
+// namespace is window.go.desktop (older layouts used main). Resolve
+// dynamically — never hardcode.
+function fkBindings() {
+  if (!window.go) return null;
+  for (const ns of Object.values(window.go)) {
+    if (ns && ns.DesktopApp) return ns.DesktopApp;
+  }
+  return null;
+}
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
@@ -32,7 +43,7 @@
     empty.classList.add("hidden");
     table.classList.add("hidden");
     try {
-      const rows = await window.go.main.DesktopApp.Surveys();
+      const rows = await fkBindings().Surveys();
       loading.classList.add("hidden");
       if (!rows || rows.length === 0) {
         empty.classList.remove("hidden");
@@ -51,7 +62,7 @@
         btn.addEventListener("click", async () => {
           if (!confirm("Delete survey " + r.name + " and its responses?")) return;
           try {
-            await window.go.main.DesktopApp.DeleteSurvey(r.id);
+            await fkBindings().DeleteSurvey(r.id);
             refreshSurveys();
           } catch (e) { alert(String(e)); }
         });
@@ -84,7 +95,7 @@
   $("#author-create").addEventListener("click", async () => {
     status("#author-status", "creating…", false);
     try {
-      const out = await window.go.main.DesktopApp.CreateSurvey($("#author-json").value, $("#author-name").value);
+      const out = await fkBindings().CreateSurvey($("#author-json").value, $("#author-name").value);
       status("#author-status", "created survey " + out.id, false);
       refreshSurveys();
     } catch (e) {
@@ -97,7 +108,7 @@
     const sel = $("#respond-survey");
     sel.textContent = "";
     try {
-      const rows = await window.go.main.DesktopApp.Surveys();
+      const rows = await fkBindings().Surveys();
       (rows || []).forEach((r) => {
         const o = document.createElement("option");
         o.value = String(r.id);
@@ -117,7 +128,7 @@
     if (!id) return;
     let def;
     try {
-      def = JSON.parse(await window.go.main.DesktopApp.SurveyDefinition(id));
+      def = JSON.parse(await fkBindings().SurveyDefinition(id));
     } catch (e) {
       form.textContent = String(e);
       return;
@@ -188,7 +199,7 @@
     const id = Number($("#respond-survey").value);
     if (!id) return;
     try {
-      const res = await window.go.main.DesktopApp.Preview(id, JSON.stringify(collectAnswers()));
+      const res = await fkBindings().Preview(id, JSON.stringify(collectAnswers()));
       refreshRespondResult(res);
     } catch (e) { $("#respond-result").textContent = String(e); }
   });
@@ -196,7 +207,7 @@
     const id = Number($("#respond-survey").value);
     if (!id) return;
     try {
-      const out = await window.go.main.DesktopApp.SubmitResponse(id, JSON.stringify(collectAnswers()));
+      const out = await fkBindings().SubmitResponse(id, JSON.stringify(collectAnswers()));
       if (out.result && out.result.errors && out.result.errors.length) {
         refreshRespondResult(out.result);
       } else {
@@ -210,7 +221,7 @@
     const sel = $("#responses-survey");
     sel.textContent = "";
     try {
-      const rows = await window.go.main.DesktopApp.Surveys();
+      const rows = await fkBindings().Surveys();
       (rows || []).forEach((r) => {
         const o = document.createElement("option");
         o.value = String(r.id);
@@ -233,8 +244,8 @@
     if (!id) return;
     let def, rows;
     try {
-      def = JSON.parse(await window.go.main.DesktopApp.SurveyDefinition(id));
-      rows = await window.go.main.DesktopApp.Responses(id);
+      def = JSON.parse(await fkBindings().SurveyDefinition(id));
+      rows = await fkBindings().Responses(id);
     } catch (e) { return; }
     if (!rows || rows.length === 0) {
       empty.classList.remove("hidden");
@@ -268,10 +279,10 @@
     const id = Number($("#responses-survey").value);
     if (!id) return;
     try {
-      const csv = await window.go.main.DesktopApp.ExportCSV(id);
-      const path = await window.go.main.DesktopApp.SaveCSVPath("survey-" + id + "-responses.csv");
+      const csv = await fkBindings().ExportCSV(id);
+      const path = await fkBindings().SaveCSVPath("survey-" + id + "-responses.csv");
       if (!path) return;
-      await window.go.main.DesktopApp.SaveFile(path, csv);
+      await fkBindings().SaveFile(path, csv);
       alert("saved " + path);
     } catch (e) { alert(String(e)); }
   });
@@ -279,13 +290,13 @@
   // ---------- migrate ----------
   $("#migrate-pick").addEventListener("click", async () => {
     try {
-      const p = await window.go.main.DesktopApp.PickJSONPath("Choose a Typeform export JSON");
+      const p = await fkBindings().PickJSONPath("Choose a Typeform export JSON");
       if (p) $("#migrate-input").value = p;
     } catch (e) { /* cancelled */ }
   });
   $("#migrate-sample").addEventListener("click", async () => {
     try {
-      const p = await window.go.main.DesktopApp.SampleFixturePath();
+      const p = await fkBindings().SampleFixturePath();
       $("#migrate-input").value = p;
       status("#migrate-status", "sample export loaded", false);
     } catch (e) { status("#migrate-status", String(e), true); }
@@ -295,7 +306,7 @@
     if (!input) { status("#migrate-status", "choose an export first", true); return; }
     status("#migrate-status", "running…", false);
     try {
-      const rep = await window.go.main.DesktopApp.MigrateDryRun("typeform", input);
+      const rep = await fkBindings().MigrateDryRun("typeform", input);
       $("#migrate-result").textContent = rep;
       status("#migrate-status", "dry-run complete — nothing imported", false);
     } catch (e) {
@@ -307,7 +318,7 @@
   // ---------- plugin ----------
   $("#plugin-pick").addEventListener("click", async () => {
     try {
-      const p = await window.go.main.DesktopApp.PickJSONPath("Choose a plugin manifest or directory");
+      const p = await fkBindings().PickJSONPath("Choose a plugin manifest or directory");
       if (p) $("#plugin-input").value = p;
     } catch (e) { /* cancelled */ }
   });
@@ -315,7 +326,7 @@
     const target = $("#plugin-input").value;
     if (!target) { $("#plugin-result").textContent = "enter a plugin directory or manifest path"; return; }
     try {
-      const out = await window.go.main.DesktopApp.PluginValidate(target);
+      const out = await fkBindings().PluginValidate(target);
       $("#plugin-result").textContent = out.message;
     } catch (e) {
       $("#plugin-result").textContent = String(e);
@@ -330,7 +341,7 @@
   $("#footer-donate-short").textContent = "Donate: ETH/USDC " + ETH + " · BTC " + BTC;
   async function copyText(text) {
     try {
-      await window.go.main.DesktopApp.CopyAddress(text);
+      await fkBindings().CopyAddress(text);
       return true;
     } catch (e) {
       try {
@@ -357,15 +368,19 @@
     if (active.id === "tab-responses") loadResponsesSurveys();
   };
   (async function boot() {
+    // wait for the Wails bindings to be injected (async; up to 10s)
+    for (let i = 0; i < 100 && !fkBindings(); i++) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
     try {
-      const v = await window.go.main.DesktopApp.Version();
+      const v = await fkBindings().Version();
       $("#version-line").textContent = "v" + v;
       $("#footer-version").textContent = "v" + v;
     } catch (e) { /* version is cosmetic */ }
     refreshSurveys();
     // first run: open the wizard before anything else
     try {
-      const seen = await window.go.main.DesktopApp.WizardSeen();
+      const seen = await fkBindings().WizardSeen();
       if (!seen) window.fieldkitWizard.open();
     } catch (e) { /* wizard is not fatal */ }
   })();

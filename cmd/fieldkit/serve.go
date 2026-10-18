@@ -1,6 +1,8 @@
 package main
 
 import (
+	fieldapp "github.com/jonathanngiroux-star/fieldkit/internal/app"
+
 	"bufio"
 	"fmt"
 	"io"
@@ -20,7 +22,7 @@ import (
 func cmdServe(args []string, stdout, stderr io.Writer) int {
 	fs := newFlagSet("serve", stderr)
 	addr := fs.String("addr", "127.0.0.1:8080", "listen address")
-	dataDir := fs.String("data-dir", defaultDataDir(), "data directory for the SQLite store")
+	dataDir := fs.String("data-dir", fieldapp.DefaultDataDir(), "data directory for the SQLite store")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -79,7 +81,7 @@ func cmdExport(args []string, stdout, stderr io.Writer) int {
 	}
 	fs := newFlagSet("export csv", stderr)
 	surveyID := fs.Int64("survey", 0, "survey id")
-	dataDir := fs.String("data-dir", defaultDataDir(), "data directory for the SQLite store")
+	dataDir := fs.String("data-dir", fieldapp.DefaultDataDir(), "data directory for the SQLite store")
 	if err := fs.Parse(rest); err != nil {
 		return 2
 	}

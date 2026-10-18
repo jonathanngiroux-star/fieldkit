@@ -4,10 +4,23 @@
 // `TEST-RESULT {json}` lines the external driver reads. Armed only
 // when the Go side has FIELDKIT_GUI_TESTBRIDGE=1 (it emits test:cmd).
 (function () {
-  if (!window.go || !window.go.main || !window.go.main.DesktopApp) return;
+// bindings(): Wails namespaces generated bindings by the bound struct's
+// package name. fieldkit binds internal/desktop.DesktopApp, so the
+// namespace is window.go.desktop (older layouts used main). Resolve
+// dynamically — never hardcode.
+function fkBindings() {
+  if (!window.go) return null;
+  for (const ns of Object.values(window.go)) {
+    if (ns && ns.DesktopApp) return ns.DesktopApp;
+  }
+  return null;
+}
+  // The Wails bindings (fkBindings()) are injected
+  // asynchronously — guard inside send() and the registration poll,
+  // never early-return the whole interpreter.
   const send = (obj) => {
     try {
-      window.go.main.DesktopApp.TestResult(JSON.stringify(obj));
+      fkBindings().TestResult(JSON.stringify(obj));
     } catch (e) { /* bridge off in production */ }
   };
 
@@ -115,13 +128,24 @@
     }
   }
 
-  window.addEventListener("DOMContentLoaded", () => {
+  // Register the test:cmd listener as soon as the Wails runtime shows
+  // up — it is injected asynchronously and may not exist at
+  // DOMContentLoaded; polling avoids the race where the bridge misses
+  // commands entirely.
+  let attempts = 0;
+  function tryRegister() {
     if (window.runtime && window.runtime.EventsOn) {
       window.runtime.EventsOn("test:cmd", (line) => {
         let cmd;
         try { cmd = JSON.parse(line); } catch (e) { return; }
         run(cmd);
       });
+      send({ id: "bridge-ready", ready: true });
+      return;
     }
-  });
+    if (attempts++ < 200) {
+      setTimeout(tryRegister, 100);
+    }
+  }
+  tryRegister();
 })();

@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	_ "embed"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -15,30 +16,44 @@ import (
 	"github.com/jonathanngiroux-star/fieldkit/internal/store"
 )
 
+// Version is the binary version string (the single source of truth;
+// overridden at build time via -ldflags "-X ...app.Version=...").
+var Version = "0.1.0"
+
+// Donation addresses — binding. Changes require the GOVERNANCE.md
+// process (unanimous maintainer consent + 30-day public notice).
+const (
+	// DonateEthereum is the ETH/USDC (ERC-20) donation address.
+	DonateEthereum = "0x85ee7E71f762d772599cbF1EC20E651B30657521"
+	// DonateBitcoin is the Bitcoin donation address.
+	DonateBitcoin = "bc1qxe2zx5tv3hdreaej6s2x4p7han85uey828rrhg"
+)
+
 // fixtureSurvey is the embedded branch fixture — the wizard's demo data
 // and the "already created" object the main view lands on.
 //
 //go:embed fixture.json
 var fixtureSurvey []byte
 
-// sampleTypeformExport is the bundled Typeform export for migrate demos.
+// SampleTypeformExport is the bundled Typeform export for migrate demos.
 //
 //go:embed sample_typeform_export.json
-var sampleTypeformExport []byte
+var SampleTypeformExport []byte
 
 // appModel is the GUI/TUI logic layer: every bound method is a thin
 // wrapper over the store + engine packages. No logic lives in the
 // frontend.
-type appModel struct {
+type Model struct {
 	st *store.Store
 }
 
-func newAppModel(st *store.Store) *appModel { return &appModel{st: st} }
+// New builds the app logic layer over an open store.
+func New(st *store.Store) *Model { return &Model{st: st} }
 
 // ---------- survey authoring / listing ----------
 
 // surveySummaries lists surveys with response counts.
-func (m *appModel) surveySummaries() ([]map[string]any, error) {
+func (m *Model) SurveySummaries() ([]map[string]any, error) {
 	list, err := m.st.ListSurveys()
 	if err != nil {
 		return nil, err
@@ -60,7 +75,7 @@ func (m *appModel) surveySummaries() ([]map[string]any, error) {
 }
 
 // createSurveyFromJSON validates and stores a definition; returns the id.
-func (m *appModel) createSurveyFromJSON(raw []byte, name string) (int64, error) {
+func (m *Model) CreateSurveyFromJSON(raw []byte, name string) (int64, error) {
 	var def map[string]any
 	if err := json.Unmarshal(raw, &def); err != nil {
 		return 0, fmt.Errorf("invalid survey JSON: %w", err)
@@ -76,7 +91,7 @@ func (m *appModel) createSurveyFromJSON(raw []byte, name string) (int64, error) 
 }
 
 // surveyDefinition returns the stored definition JSON for editing.
-func (m *appModel) surveyDefinition(id int64) (string, error) {
+func (m *Model) SurveyDefinition(id int64) (string, error) {
 	b, err := m.st.SurveyJSON(id)
 	if err != nil {
 		return "", err
@@ -85,13 +100,13 @@ func (m *appModel) surveyDefinition(id int64) (string, error) {
 }
 
 // deleteSurvey removes a survey and its responses.
-func (m *appModel) deleteSurvey(id int64) error { return m.st.DeleteSurvey(id) }
+func (m *Model) DeleteSurvey(id int64) error { return m.st.DeleteSurvey(id) }
 
 // ---------- respondent runner ----------
 
 // preview evaluates a stored survey against answers without storing:
 // visible questions, validation errors. Same engine as submit/CI.
-func (m *appModel) preview(id int64, answers map[string]any) (logic.Result, error) {
+func (m *Model) preview(id int64, answers map[string]any) (logic.Result, error) {
 	def, err := m.st.SurveyJSON(id)
 	if err != nil {
 		return logic.Result{}, err
@@ -104,7 +119,7 @@ func (m *appModel) preview(id int64, answers map[string]any) (logic.Result, erro
 }
 
 // previewJSON parses an answers JSON string and previews.
-func (m *appModel) previewJSON(id int64, answersJSON string) (logic.Result, error) {
+func (m *Model) PreviewJSON(id int64, answersJSON string) (logic.Result, error) {
 	var answers map[string]any
 	if answersJSON != "" {
 		if err := json.Unmarshal([]byte(answersJSON), &answers); err != nil {
@@ -116,7 +131,7 @@ func (m *appModel) previewJSON(id int64, answersJSON string) (logic.Result, erro
 
 // submitResponse validates and stores one response (the GUI's
 // "respondent page" submit action).
-func (m *appModel) submitResponse(id int64, answers map[string]any, agent string) (int64, logic.Result, error) {
+func (m *Model) SubmitResponse(id int64, answers map[string]any, agent string) (int64, logic.Result, error) {
 	res, err := m.preview(id, answers)
 	if err != nil {
 		return 0, res, err
@@ -135,7 +150,7 @@ func (m *appModel) submitResponse(id int64, answers map[string]any, agent string
 }
 
 // responses lists a survey's responses for the table view.
-func (m *appModel) responses(id int64) ([]map[string]any, error) {
+func (m *Model) Responses(id int64) ([]map[string]any, error) {
 	rows, err := m.st.Responses(id)
 	if err != nil {
 		return nil, err
@@ -170,13 +185,13 @@ func (m *appModel) responses(id int64) ([]map[string]any, error) {
 }
 
 // exportCSV returns the CSV text for download.
-func (m *appModel) exportCSV(id int64) (string, error) { return m.st.ExportCSV(id) }
+func (m *Model) ExportCSV(id int64) (string, error) { return m.st.ExportCSV(id) }
 
 // ---------- migrate ----------
 
 // migrateDryRun runs the Typeform converter on a file and returns the
 // JSON report.
-func (m *appModel) migrateDryRun(source, input string) (string, error) {
+func (m *Model) MigrateDryRun(source, input string) (string, error) {
 	if source != "typeform" {
 		return "", fmt.Errorf("only typeform is supported (qualtrics is gated on typeform fidelity)")
 	}
@@ -194,13 +209,14 @@ func (m *appModel) migrateDryRun(source, input string) (string, error) {
 
 // sampleFixturePath materializes the embedded Typeform sample export for
 // users without an export yet.
-func sampleFixturePath() (string, error) {
+// SampleFixturePath materializes the bundled Typeform export.
+func SampleFixturePath() (string, error) {
 	f, err := os.CreateTemp("", "fieldkit-typeform-sample-*.json")
 	if err != nil {
 		return "", err
 	}
 	defer f.Close()
-	if _, err := f.Write(sampleTypeformExport); err != nil {
+	if _, err := f.Write(SampleTypeformExport); err != nil {
 		return "", err
 	}
 	return f.Name(), nil
@@ -210,7 +226,7 @@ func sampleFixturePath() (string, error) {
 
 // pluginValidate validates a manifest file or directory and returns the
 // ok line or the error text (the GUI shows errors, never a 500).
-func (m *appModel) pluginValidate(target string) (string, bool) {
+func (m *Model) PluginValidate(target string) (string, bool) {
 	dir := target
 	manifest := filepath.Join(target, "manifest.json")
 	if info, err := os.Stat(target); err == nil && !info.IsDir() {
@@ -234,7 +250,8 @@ func (m *appModel) pluginValidate(target string) (string, bool) {
 // ---------- wizard ----------
 
 // wizardField is one wizard input.
-type wizardField struct {
+// WizardField is one wizard input.
+type WizardField struct {
 	ID       string `json:"id"`
 	Label    string `json:"label"`
 	Type     string `json:"type"` // text | textarea
@@ -243,11 +260,12 @@ type wizardField struct {
 }
 
 // wizardStep is one first-run wizard page.
-type wizardStep struct {
+// WizardStep is one first-run wizard page.
+type WizardStep struct {
 	ID        string        `json:"id"`
 	Title     string        `json:"title"`
 	Body      string        `json:"body"`
-	Fields    []wizardField `json:"fields"`
+	Fields    []WizardField `json:"fields"`
 	NextLabel string        `json:"nextLabel"`
 }
 
@@ -255,13 +273,14 @@ type wizardStep struct {
 // this product, in order; the last step is the donate step with both
 // addresses. "Skip" only exists on the data-dir step (the rest of the
 // wizard is the core workflow).
-func wizardSteps() []wizardStep {
-	return []wizardStep{
+// WizardSteps returns the first-run sequence (shared by GUI and TUI).
+func WizardSteps() []WizardStep {
+	return []WizardStep{
 		{
 			ID:        "data",
 			Title:     "Where should Fieldkit store data?",
 			Body:      "One SQLite file under a data directory you choose. This is the same data the CLI, the TUI, and this window use.",
-			Fields:    []wizardField{{ID: "datadir", Label: "Data directory", Type: "text", Required: false, Value: defaultDataDir()}},
+			Fields:    []WizardField{{ID: "datadir", Label: "Data directory", Type: "text", Required: false, Value: DefaultDataDir()}},
 			NextLabel: "Next",
 		},
 		{
@@ -274,14 +293,14 @@ func wizardSteps() []wizardStep {
 			ID:        "author",
 			Title:     "Author your own survey",
 			Body:      "Surveys are JSON documents (questions, branching, required, hidden fields). This step creates a starter survey you can edit in the Author tab.",
-			Fields:    []wizardField{{ID: "title", Label: "Survey title", Type: "text", Required: true, Value: "My first survey"}},
+			Fields:    []WizardField{{ID: "title", Label: "Survey title", Type: "text", Required: true, Value: "My first survey"}},
 			NextLabel: "Create",
 		},
 		{
 			ID:    "respond",
 			Title: "Answer it as a respondent",
 			Body:  "The respondent runner walks the survey with live logic — hidden questions appear only when their branch fires. Submitting here stores a real response.",
-			Fields: []wizardField{
+			Fields: []WizardField{
 				{ID: "q1", Label: "Did the onboarding flow work? (yes/no)", Type: "text", Required: true, Value: "yes"},
 				{ID: "q3", Label: "Anything else?", Type: "text", Required: false, Value: ""},
 			},
@@ -296,21 +315,22 @@ func wizardSteps() []wizardStep {
 		{
 			ID:        "donate",
 			Title:     "Fieldkit is donation-only",
-			Body:      "There is no paid tier, no subscription, no invoice, and no feature gated on money — there never will be. If Fieldkit replaces a paid survey-platform line item for you, donations are welcome:\n\nEthereum / USDC (ERC-20): " + donateEthereum + "\nBitcoin: " + donateBitcoin + "\n\nNo other wallets are associated with this project.",
+			Body:      "There is no paid tier, no subscription, no invoice, and no feature gated on money — there never will be. If Fieldkit replaces a paid survey-platform line item for you, donations are welcome:\n\nEthereum / USDC (ERC-20): " + DonateEthereum + "\nBitcoin: " + DonateBitcoin + "\n\nNo other wallets are associated with this project.",
 			NextLabel: "Finish",
 		},
 	}
 }
 
 // wizardRunStep executes a step's real operation on the user's values.
-func wizardRunStep(m *appModel, stepID string, values map[string]string) (string, error) {
+// WizardRunStep executes a step's real operation on the user's values.
+func WizardRunStep(m *Model, stepID string, values map[string]string) (string, error) {
 	switch stepID {
 	case "data":
 		// No-op here: the data dir was chosen at launch; this step
 		// records that the wizard was walked.
 		return "data directory confirmed", nil
 	case "import":
-		id, err := m.createSurveyFromJSON(fixtureSurvey, "Onboarding feedback")
+		id, err := m.CreateSurveyFromJSON(fixtureSurvey, "Onboarding feedback")
 		if err != nil {
 			return "", fmt.Errorf("import fixture: %w", err)
 		}
@@ -321,7 +341,7 @@ func wizardRunStep(m *appModel, stepID string, values map[string]string) (string
 			return "", fmt.Errorf("survey title required")
 		}
 		raw := fmt.Sprintf(`{"title":%q,"questions":[{"id":"q1","type":"text","title":%q,"required":true}]}`, title, "What would you like to ask?")
-		id, err := m.createSurveyFromJSON([]byte(raw), title)
+		id, err := m.CreateSurveyFromJSON([]byte(raw), title)
 		if err != nil {
 			return "", err
 		}
@@ -347,7 +367,7 @@ func wizardRunStep(m *appModel, stepID string, values map[string]string) (string
 		if v := strings.TrimSpace(values["q3"]); v != "" {
 			answers["q3"] = v
 		}
-		rid, _, err := m.submitResponse(target.ID, answers, "fieldkit-wizard")
+		rid, _, err := m.SubmitResponse(target.ID, answers, "fieldkit-wizard")
 		if err != nil {
 			return "", err
 		}
@@ -360,14 +380,14 @@ func wizardRunStep(m *appModel, stepID string, values map[string]string) (string
 		if len(list) == 0 {
 			return "no surveys yet — the CSV export will have a header only", nil
 		}
-		csv, err := m.exportCSV(list[0].ID)
+		csv, err := m.ExportCSV(list[0].ID)
 		if err != nil {
 			return "", err
 		}
 		lines := strings.Count(csv, "\n")
 		return fmt.Sprintf("CSV ready: %d line(s) (header + responses)", lines), nil
 	case "donate":
-		if err := m.wizardDone(); err != nil {
+		if err := m.WizardDone(); err != nil {
 			return "", err
 		}
 		return "done", nil
@@ -377,11 +397,30 @@ func wizardRunStep(m *appModel, stepID string, values map[string]string) (string
 }
 
 // wizardSeen reports whether the first-run wizard has been completed.
-func (m *appModel) wizardSeen() bool {
+// WizardSeen reports whether the first-run wizard has been completed.
+func (m *Model) WizardSeen() bool {
 	return m.st.SettingGet("wizard_seen") == "1"
 }
 
 // wizardDone persists wizard completion.
-func (m *appModel) wizardDone() error {
+// WizardDone persists wizard completion.
+func (m *Model) WizardDone() error {
 	return m.st.SettingSet("wizard_seen", "1")
+}
+
+// DefaultDataDir is where the app stores its SQLite file when no data
+// dir is given: XDG-style per-OS defaults.
+func DefaultDataDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "fieldkit-data"
+	}
+	switch runtime.GOOS {
+	case "windows":
+		return filepath.Join(home, "AppData", "Local", "Fieldkit", "Data")
+	case "darwin":
+		return filepath.Join(home, "Library", "Application Support", "Fieldkit")
+	default:
+		return filepath.Join(home, ".local", "share", "fieldkit")
+	}
 }

@@ -1,12 +1,14 @@
 package main
 
 // tui_wizard.go: the TUI wizard renderer. One tview page per step, built
-// from the shared wizardSteps() — zero logic here; Run collects the
-// field values and calls wizardRunStep, exactly like the GUI. Every
+// from the shared fieldapp.WizardSteps() — zero logic here; Run collects the
+// field values and calls fieldapp.WizardRunStep, exactly like the GUI. Every
 // step is keyboard-reachable: Tab/Enter traverse the form, Enter in an
 // input runs the step.
 
 import (
+	fieldapp "github.com/jonathanngiroux-star/fieldkit/internal/app"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -14,9 +16,9 @@ import (
 // tuiWizard is the wizard overlay: one page per step over the main UI.
 type tuiWizard struct {
 	app     *tview.Application
-	m       *appModel
+	m       *fieldapp.Model
 	pages   *tview.Pages
-	steps   []wizardStep
+	steps   []fieldapp.WizardStep
 	forms   []*tview.Form
 	outputs []*tview.TextView
 	onDone  func()
@@ -24,12 +26,12 @@ type tuiWizard struct {
 
 // newTUIWizard builds all wizard pages up front. onDone fires when the
 // tour is finished or skipped.
-func newTUIWizard(app *tview.Application, m *appModel, onDone func()) *tuiWizard {
+func newTUIWizard(app *tview.Application, m *fieldapp.Model, onDone func()) *tuiWizard {
 	w := &tuiWizard{
 		app:    app,
 		m:      m,
 		pages:  tview.NewPages(),
-		steps:  wizardSteps(),
+		steps:  fieldapp.WizardSteps(),
 		onDone: onDone,
 	}
 	for i := range w.steps {
@@ -123,7 +125,7 @@ func (w *tuiWizard) run(i int) {
 	for fi, f := range step.Fields {
 		values[f.ID] = form.GetFormItem(fi).(*tview.InputField).GetText()
 	}
-	out, err := wizardRunStep(w.m, step.ID, values)
+	out, err := fieldapp.WizardRunStep(w.m, step.ID, values)
 	ot := w.outputs[i]
 	if err != nil {
 		ot.SetText("[red]" + err.Error())
@@ -137,6 +139,6 @@ func (w *tuiWizard) run(i int) {
 // must not be. wizard_seen only gates the auto-open; the w hotkey and
 // the nav entry always reopen it.
 func (w *tuiWizard) finish(completed bool) {
-	_ = w.m.wizardDone()
+	_ = w.m.WizardDone()
 	w.onDone()
 }

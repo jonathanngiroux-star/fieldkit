@@ -1,6 +1,8 @@
 package main
 
 import (
+	fieldapp "github.com/jonathanngiroux-star/fieldkit/internal/app"
+
 	"strings"
 	"testing"
 
@@ -11,7 +13,7 @@ import (
 // fixture import (or the migrate dry-run) -> author a survey -> submit a
 // response -> export -> donate. The last step shows both addresses.
 func TestWizardStepsContract(t *testing.T) {
-	steps := wizardSteps()
+	steps := fieldapp.WizardSteps()
 	if len(steps) < 5 {
 		t.Fatalf("wizard too short: %d steps", len(steps))
 	}
@@ -25,7 +27,7 @@ func TestWizardStepsContract(t *testing.T) {
 		}
 	}
 	// donate step carries both addresses byte-for-byte
-	var donateStep *wizardStep
+	var donateStep *fieldapp.WizardStep
 	for i := range steps {
 		if steps[i].ID == "donate" {
 			donateStep = &steps[i]
@@ -40,7 +42,7 @@ func TestWizardStepsContract(t *testing.T) {
 	}
 }
 
-// wizardRunStep: the fixture-import step must create a real survey in a
+// fieldapp.WizardRunStep: the fixture-import step must create a real survey in a
 // real store — the wizard runs real operations, not tooltips.
 func TestWizardImportStepCreatesSurvey(t *testing.T) {
 	dir := t.TempDir()
@@ -49,8 +51,8 @@ func TestWizardImportStepCreatesSurvey(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer st.Close()
-	m := newAppModel(st)
-	out, err := wizardRunStep(m, "import", map[string]string{})
+	m := fieldapp.New(st)
+	out, err := fieldapp.WizardRunStep(m, "import", map[string]string{})
 	if err != nil {
 		t.Fatalf("import step: %v", err)
 	}
@@ -66,7 +68,7 @@ func TestWizardImportStepCreatesSurvey(t *testing.T) {
 	}
 }
 
-// wizardRunStep: the author step must create the survey the user named.
+// fieldapp.WizardRunStep: the author step must create the survey the user named.
 func TestWizardAuthorStepCreatesSurvey(t *testing.T) {
 	dir := t.TempDir()
 	st, err := store.Open(dir)
@@ -74,8 +76,8 @@ func TestWizardAuthorStepCreatesSurvey(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer st.Close()
-	m := newAppModel(st)
-	out, err := wizardRunStep(m, "author", map[string]string{"title": "My first survey"})
+	m := fieldapp.New(st)
+	out, err := fieldapp.WizardRunStep(m, "author", map[string]string{"title": "My first survey"})
 	if err != nil {
 		t.Fatalf("author step: %v", err)
 	}
@@ -85,7 +87,7 @@ func TestWizardAuthorStepCreatesSurvey(t *testing.T) {
 	}
 }
 
-// wizardRunStep: the respond step submits a real response to the
+// fieldapp.WizardRunStep: the respond step submits a real response to the
 // imported survey.
 func TestWizardRespondStepSubmits(t *testing.T) {
 	dir := t.TempDir()
@@ -94,11 +96,11 @@ func TestWizardRespondStepSubmits(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer st.Close()
-	m := newAppModel(st)
-	if _, err := wizardRunStep(m, "import", map[string]string{}); err != nil {
+	m := fieldapp.New(st)
+	if _, err := fieldapp.WizardRunStep(m, "import", map[string]string{}); err != nil {
 		t.Fatal(err)
 	}
-	_, err = wizardRunStep(m, "respond", map[string]string{"q1": "yes", "q3": "wizard"})
+	_, err = fieldapp.WizardRunStep(m, "respond", map[string]string{"q1": "yes", "q3": "wizard"})
 	if err != nil {
 		t.Fatalf("respond step: %v", err)
 	}
@@ -112,12 +114,12 @@ func TestWizardRespondStepSubmits(t *testing.T) {
 	}
 }
 
-// wizardRunStep: unknown step id is an error naming it.
+// fieldapp.WizardRunStep: unknown step id is an error naming it.
 func TestWizardUnknownStep(t *testing.T) {
 	st, _ := store.Open(t.TempDir())
 	defer st.Close()
-	m := newAppModel(st)
-	if _, err := wizardRunStep(m, "teleport", map[string]string{}); err == nil {
+	m := fieldapp.New(st)
+	if _, err := fieldapp.WizardRunStep(m, "teleport", map[string]string{}); err == nil {
 		t.Fatal("unknown step must error")
 	}
 }
@@ -131,14 +133,14 @@ func TestWizardSeenState(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer st.Close()
-	m := newAppModel(st)
-	if m.wizardSeen() {
+	m := fieldapp.New(st)
+	if m.WizardSeen() {
 		t.Fatal("fresh data dir must be unseen")
 	}
-	if err := m.wizardDone(); err != nil {
+	if err := m.WizardDone(); err != nil {
 		t.Fatal(err)
 	}
-	if !m.wizardSeen() {
+	if !m.WizardSeen() {
 		t.Fatal("wizardDone must persist seen state")
 	}
 }

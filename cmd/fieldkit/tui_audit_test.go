@@ -6,6 +6,8 @@ package main
 // the simulated screen, real tview app.
 
 import (
+	fieldapp "github.com/jonathanngiroux-star/fieldkit/internal/app"
+
 	"strings"
 	"testing"
 	"time"
@@ -28,9 +30,9 @@ func TestTUIFirstLaunchOpensWizard(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer st.Close()
-	m := newAppModel(st)
+	m := fieldapp.New(st)
 
-	if m.wizardSeen() {
+	if m.WizardSeen() {
 		t.Fatal("fresh dir must be unseen")
 	}
 
@@ -56,8 +58,8 @@ func TestTUIMainScreenKeyboard(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer st.Close()
-	m := newAppModel(st)
-	_ = m.wizardDone() // main screen state, not first-run
+	m := fieldapp.New(st)
+	_ = m.WizardDone() // main screen state, not first-run
 
 	// Build the main-screen pieces exactly as runTUI (extracted helper
 	// would duplicate; here we assert the key path through the real
@@ -93,7 +95,7 @@ func TestTUIMainScreenKeyboard(t *testing.T) {
 	// 4 -> donate section shows both addresses
 	inject(tcell.KeyRune, '4')
 	text := readScreen()
-	if !strings.Contains(text, donateEthereum) || !strings.Contains(text, donateBitcoin) {
+	if !strings.Contains(text, fieldapp.DonateEthereum) || !strings.Contains(text, fieldapp.DonateBitcoin) {
 		t.Fatalf("key 4 must show the donate page with both addresses:\n%.400s", text)
 	}
 	// footer carries the addresses on every screen: scan every row for
@@ -126,7 +128,7 @@ func TestTUIResizeMidWizard(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer st.Close()
-	m := newAppModel(st)
+	m := fieldapp.New(st)
 
 	runWizardOnScreen(t, m, func(app *tview.Application, w *tuiWizard, screen tcell.SimulationScreen) {
 		// mid-wizard: advance to step 2 (import)
@@ -170,7 +172,7 @@ func TestTUINonTTYRefusesFast(t *testing.T) {
 // buildMainScreenOnSim reproduces runTUI's main screen construction on
 // a sim screen (runTUI owns its app; this mirrors its structure so the
 // key handlers under test are the real ones).
-func buildMainScreenOnSim(t *testing.T, m *appModel) (*tview.Application, tcell.SimulationScreen) {
+func buildMainScreenOnSim(t *testing.T, m *fieldapp.Model) (*tview.Application, tcell.SimulationScreen) {
 	t.Helper()
 	screen := tcell.NewSimulationScreen("")
 	if err := screen.Init(); err != nil {

@@ -17,7 +17,7 @@ jobs:
         run: go vet ./...
       - name: test (race on the concurrent packages)
         run: go test -race ./internal/store/ ./internal/serve/
-      - name: test (all)
+      - name: test (all, incl. TUI sim-screen suites)
         run: go test ./...
       - name: build
         run: go build -o fieldkit ./cmd/fieldkit
@@ -44,6 +44,32 @@ jobs:
       # Logic fixture gate: the branch fixture's evaluation is stable.
       - name: logic fixture gate
         run: |
+          echo '{"q1":"no","q2":"x","q3":"y"}' > /tmp/answers.json
           ./fieldkit logic --survey testdata/logic/branch.json \
-            --answers <(echo '{"q1":"no","q2":"x","q3":"y"}') --format=json > /tmp/logic.json
+            --answers /tmp/answers.json --format=json > /tmp/logic.json
           jq -e '(.visible_questions | length)==3 and (.errors | length)==0' /tmp/logic.json
+      # Docker: the image must build from a clean tree.
+      - name: docker build
+        run: docker build -t fieldkit-ci .
+
+  desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.27"
+      # The wails-tagged desktop GUI must compile (webkit2gtk on the
+      # runner). Without this step the tagged source rots silently.
+      - name: install desktop build deps (webkit2gtk-4.1)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev
+      # wails.json + the root main package make `wails build` the
+      # canonical desktop build; it must produce a binary.
+      - name: wails build (desktop binary)
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0
+          wails build -tags "wails webkit2_41"
+          test -x build/bin/fieldkit-desktop
+      # The CLI binary must also still carry the desktop command.
+      - name: desktop build compiles (wails tag, CLI path)
+        run: CGO_ENABLED=1 go build -tags "wails production webkit2_41" -o /tmp/fieldkit-desktop ./cmd/fieldkit

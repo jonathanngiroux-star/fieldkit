@@ -4,6 +4,17 @@
 // response). The last step shows both donation addresses. Reopened any
 // time via "Help: open wizard" or the w key.
 (function () {
+// bindings(): Wails namespaces generated bindings by the bound struct's
+// package name. fieldkit binds internal/desktop.DesktopApp, so the
+// namespace is window.go.desktop (older layouts used main). Resolve
+// dynamically — never hardcode.
+function fkBindings() {
+  if (!window.go) return null;
+  for (const ns of Object.values(window.go)) {
+    if (ns && ns.DesktopApp) return ns.DesktopApp;
+  }
+  return null;
+}
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
   let steps = [];
@@ -11,7 +22,7 @@
   let lastResult = "";
 
   async function load() {
-    steps = await window.go.main.DesktopApp.WizardSteps();
+    steps = await fkBindings().WizardSteps();
   }
 
   function render() {
@@ -56,7 +67,7 @@
   async function next() {
     const s = steps[idx];
     try {
-      lastResult = await window.go.main.DesktopApp.WizardRunStep(s.id, collect());
+      lastResult = await fkBindings().WizardRunStep(s.id, collect());
     } catch (e) {
       lastResult = String(e);
       $("#wizard-result").textContent = lastResult;
@@ -78,7 +89,7 @@
   async function skip() {
     // Skip is allowed: the tour is optional. Mark seen so it does not
     // nag, and land on the main view.
-    try { await window.go.main.DesktopApp.WizardDone(); } catch (e) {}
+    try { await fkBindings().WizardDone(); } catch (e) {}
     close();
   }
 

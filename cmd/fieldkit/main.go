@@ -3,13 +3,13 @@
 package main
 
 import (
+	fieldapp "github.com/jonathanngiroux-star/fieldkit/internal/app"
+
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/jonathanngiroux-star/fieldkit/internal/store"
@@ -19,12 +19,8 @@ import (
 // -ldflags "-X main.version=...".
 var version = "0.1.0"
 
-// Donation addresses — binding. Changes require the GOVERNANCE.md
-// process (unanimous maintainer consent + 30-day public notice).
-const (
-	donateEthereum = "0x85ee7E71f762d772599cbF1EC20E651B30657521"
-	donateBitcoin  = "bc1qxe2zx5tv3hdreaej6s2x4p7han85uey828rrhg"
-)
+// Donation addresses live in internal/app (DonateEthereum /
+// DonateBitcoin) — the single source of truth shared by every surface.
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
@@ -94,8 +90,8 @@ func cmdDonate(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprint(stdout, `Fieldkit is free to self-host. If it replaces a survey-platform
 line item for you, donations are welcome:
 
-Ethereum / USDC (ERC-20): `+donateEthereum+`
-Bitcoin:                  `+donateBitcoin+`
+Ethereum / USDC (ERC-20): `+fieldapp.DonateEthereum+`
+Bitcoin:                  `+fieldapp.DonateBitcoin+`
 
 No feature is gated on donations. Details: docs/donate.md
 `)
@@ -126,22 +122,8 @@ func newFlagSet(name string, stderr io.Writer) *flag.FlagSet {
 	return fs
 }
 
-// defaultDataDir is where the CLI stores its SQLite file when --data-dir
-// is not given: ~/.local/share/fieldkit (XDG), with a fallback for
-// non-Linux.
-func defaultDataDir() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "fieldkit-data"
-	}
-	if runtime.GOOS == "windows" {
-		return filepath.Join(home, "AppData", "Local", "Fieldkit", "Data")
-	}
-	if runtime.GOOS == "darwin" {
-		return filepath.Join(home, "Library", "Application Support", "Fieldkit")
-	}
-	return filepath.Join(home, ".local", "share", "fieldkit")
-}
+// defaultDataDir delegates to the app package's shared default
+// (XDG-style per OS).
 
 // jsonUnmarshal is a strict JSON decode used across the CLI.
 func jsonUnmarshal(raw []byte, v any) error {
@@ -153,7 +135,7 @@ func cmdSurveysCreate(args []string, stdout, stderr io.Writer) int {
 	fs := newFlagSet("surveys create", stderr)
 	file := fs.String("file", "", "survey definition JSON file")
 	name := fs.String("name", "", "survey name (defaults to the definition title)")
-	dataDir := fs.String("data-dir", defaultDataDir(), "data directory for the SQLite store")
+	dataDir := fs.String("data-dir", fieldapp.DefaultDataDir(), "data directory for the SQLite store")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -196,7 +178,7 @@ func cmdSurveysCreate(args []string, stdout, stderr io.Writer) int {
 
 func cmdSurveysList(args []string, stdout, stderr io.Writer) int {
 	fs := newFlagSet("surveys list", stderr)
-	dataDir := fs.String("data-dir", defaultDataDir(), "data directory for the SQLite store")
+	dataDir := fs.String("data-dir", fieldapp.DefaultDataDir(), "data directory for the SQLite store")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}

@@ -1,6 +1,6 @@
 //go:build wails
 
-package main
+package desktop
 
 // testbridge.go: in-app test bridge (the warmline/proofspan pattern —
 // see the go-gui-audit-testing skill). When the app is launched with

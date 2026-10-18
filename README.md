@@ -91,6 +91,33 @@ live branch logic, the response table with CSV download, the Typeform
 migrate dry-run viewer, plugin manifest validation (errors shown, never
 a crash), and the donate view with copy buttons.
 
+## TUI
+
+`fieldkit tui` is the terminal front end over the same SQLite data
+(the GUI, TUI, and CLI share one data model). Pure Go (tview/tcell) —
+it ships in the same cgo-free binary as the CLI.
+
+```sh
+fieldkit tui --data-dir ./data
+```
+
+Keys:
+
+| Key | Action |
+|---|---|
+| `1`–`4` | switch sections (surveys, logic, migrate, donate) |
+| `w` | open the setup wizard |
+| `q` | quit |
+| `Tab` / `Enter` | traverse forms; Enter in a field runs the step |
+| `e` / `b` | on the donate page: copy the ETH/USDC / Bitcoin address |
+
+The TUI wizard mirrors the GUI wizard: same steps, same real
+operations (the import step creates the demo survey, the respond step
+stores a real response), Prev/Next buttons, and "Skip tour" — any exit
+marks it seen, and `w` reopens it any time. The donate footer with both
+addresses is on every screen. In non-interactive contexts (pipes, CI)
+the TUI refuses with a hint instead of hanging.
+
 ## Commands
 
 | Command | What it does |

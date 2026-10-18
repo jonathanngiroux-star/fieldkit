@@ -25,6 +25,7 @@ func TestNoBillingSurface(t *testing.T) {
 		"AGENTS.md":                    true, // agent-facing notes
 		"GOVERNANCE.md":                true, // policy file names the banned concepts to ban them
 		"docs/audit/backend.md":        true, // audit note documents the gate itself
+		"docs/audit/gui.md":            true, // audit note names the banned tokens it scans for
 	}
 
 	root := repoRoot(t)

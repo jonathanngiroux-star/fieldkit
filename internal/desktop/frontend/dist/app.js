@@ -333,6 +333,38 @@ function fkBindings() {
     }
   });
 
+  // pasted-manifest upload: same contract check, on the JSON text
+  let pluginEntryDir = "";
+  $("#plugin-pick-dir").addEventListener("click", async () => {
+    try {
+      const p = await fkBindings().PickJSONPath("Choose the plugin directory (manifest.json inside it)");
+      if (p) {
+        pluginEntryDir = p;
+        $("#plugin-dir-label").textContent = "entrypoint checked in: " + p;
+      }
+    } catch (e) { /* cancelled */ }
+  });
+  $("#plugin-load-sample").addEventListener("click", () => {
+    $("#plugin-manifest").value = JSON.stringify({
+      api_version: 1,
+      name: "sample",
+      version: "1.0.0",
+      kind: "question_type",
+      description: "Sample in-repo plugin: a slider question type rendered by the host.",
+      entrypoint: "sample.js"
+    }, null, 2);
+  });
+  $("#plugin-validate-json").addEventListener("click", async () => {
+    const raw = $("#plugin-manifest").value;
+    if (!raw.trim()) { $("#plugin-result").textContent = "paste a manifest JSON first"; return; }
+    try {
+      const out = await fkBindings().PluginValidateJSON(raw, pluginEntryDir);
+      $("#plugin-result").textContent = out.message;
+    } catch (e) {
+      $("#plugin-result").textContent = String(e);
+    }
+  });
+
   // ---------- donate ----------
   const ETH = "0x85ee7E71f762d772599cbF1EC20E651B30657521";
   const BTC = "bc1qxe2zx5tv3hdreaej6s2x4p7han85uey828rrhg";

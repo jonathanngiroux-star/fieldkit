@@ -38,6 +38,10 @@ export function PluginValidate(arg1) {
   return window['go']['desktop']['DesktopApp']['PluginValidate'](arg1);
 }
 
+export function PluginValidateJSON(arg1, arg2) {
+  return window['go']['desktop']['DesktopApp']['PluginValidateJSON'](arg1, arg2);
+}
+
 export function Preview(arg1, arg2) {
   return window['go']['desktop']['DesktopApp']['Preview'](arg1, arg2);
 }

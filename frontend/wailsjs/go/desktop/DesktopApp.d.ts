@@ -21,6 +21,8 @@ export function Ping():Promise<string>;
 
 export function PluginValidate(arg1:string):Promise<Record<string, any>>;
 
+export function PluginValidateJSON(arg1:string,arg2:string):Promise<Record<string, any>>;
+
 export function Preview(arg1:number,arg2:string):Promise<logic.Result>;
 
 export function Responses(arg1:number):Promise<Array<Record<string, any>>>;

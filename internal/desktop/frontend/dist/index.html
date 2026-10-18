@@ -100,6 +100,16 @@
           <button id="plugin-pick">Browse…</button>
           <button id="plugin-validate" class="primary">Validate</button>
         </div>
+        <div class="row">
+          <button id="plugin-pick-dir">Pick plugin dir for pasted manifest…</button>
+          <span id="plugin-dir-label" class="hint"></span>
+        </div>
+        <p class="hint">Or paste the manifest JSON to run the contract check on it directly:</p>
+        <textarea id="plugin-manifest" rows="8" spellcheck="false" placeholder='{ "api_version": 1, "name": "sample", ... }'></textarea>
+        <div class="row">
+          <button id="plugin-validate-json" class="primary">Check pasted manifest</button>
+          <button id="plugin-load-sample">Paste sample manifest</button>
+        </div>
         <pre id="plugin-result" class="result"></pre>
       </section>
 

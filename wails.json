@@ -6,6 +6,7 @@
   "frontend:build": "",
   "frontend:dev:watcher": "",
   "frontend:dev:serverUrl": "",
+  "assetdir": "./internal/desktop/frontend/dist",
   "author": {
     "name": "Jonathann Giroux"
   },

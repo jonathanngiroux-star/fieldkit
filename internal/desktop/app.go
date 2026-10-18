@@ -24,6 +24,7 @@ import (
 
 	"github.com/jonathanngiroux-star/fieldkit/internal/app"
 	"github.com/jonathanngiroux-star/fieldkit/internal/logic"
+	"github.com/jonathanngiroux-star/fieldkit/internal/plugin"
 	"github.com/jonathanngiroux-star/fieldkit/internal/store"
 )
 
@@ -102,6 +103,26 @@ func (a *DesktopApp) SampleFixturePath() (string, error) { return app.SampleFixt
 func (a *DesktopApp) PluginValidate(target string) (map[string]any, error) {
 	msg, ok := a.m.PluginValidate(target)
 	return map[string]any{"ok": ok, "message": msg}, nil
+}
+
+// PluginValidateJSON validates a pasted manifest ("upload"): the same
+// api_version-1 contract over the JSON text; entryDir (optional) is
+// where the entrypoint file is checked. Errors name the field — the
+// frontend shows them, never a 500.
+func (a *DesktopApp) PluginValidateJSON(manifestJSON, entryDir string) (map[string]any, error) {
+	m, err := plugin.ParseManifest([]byte(manifestJSON))
+	if err != nil {
+		return map[string]any{"ok": false, "message": "invalid manifest: " + err.Error()}, nil
+	}
+	if entryDir != "" {
+		if err := m.Validate(entryDir); err != nil {
+			return map[string]any{"ok": false, "message": "contract failed: " + err.Error()}, nil
+		}
+	}
+	return map[string]any{
+		"ok":      true,
+		"message": fmt.Sprintf("ok %s %s (%s, api_version %d)", m.Name, m.Version, m.Kind, m.APIVersion),
+	}, nil
 }
 
 // ---------- wizard ----------

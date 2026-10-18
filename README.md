@@ -70,10 +70,31 @@ The GUI is a [Wails](https://github.com/wailsapp/wails) v2 desktop
 app (Linux: WebKitGTK; Windows: WebView2). It is a thin renderer over
 the same logic layer as the CLI — one data model, one SQLite file.
 
+Install the Wails CLI once:
+
 ```sh
-# one-time: Linux needs the webkit2gtk-4.1 dev headers
-#   Debian/Ubuntu: sudo apt install libwebkit2gtk-4.1-dev
-#   Arch: sudo pacman -S webkit2gtk-4.1
+go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0
+```
+
+Build the desktop app (Linux needs the webkit2gtk-4.1 dev headers:
+Debian/Ubuntu `sudo apt install libwebkit2gtk-4.1-dev`; Arch
+`sudo pacman -S webkit2gtk-4.1`):
+
+```sh
+wails build -tags "wails webkit2_41"      # -> build/bin/fieldkit-desktop
+./build/bin/fieldkit-desktop
+```
+
+For GUI development with live reload (DevServer at
+`http://localhost:34115`, full window on screen):
+
+```sh
+wails dev -tags "wails webkit2_41"
+```
+
+The equivalent raw-Go build (no Wails CLI) also works:
+
+```sh
 go build -tags "wails production webkit2_41" -o fieldkit-desktop ./cmd/fieldkit
 ./fieldkit-desktop desktop --data-dir ./data
 ```

@@ -11,10 +11,10 @@ import (
 	"github.com/rivo/tview"
 )
 
-// runTUI builds and runs the terminal UI. Requires a TTY (checked by
-// the launcher, not here).
-func runTUI(m *appModel) int {
-	app := tview.NewApplication()
+// buildMainScreen constructs the main screen (nav + pages + footer and
+// the global key handlers). runTUI runs it; tests drive it on a sim
+// screen with the same handlers.
+func buildMainScreen(m *appModel, app *tview.Application) (tview.Primitive, func()) {
 
 	output := tview.NewTextView().
 		SetDynamicColors(true).
@@ -180,6 +180,16 @@ func runTUI(m *appModel) int {
 		}
 		return event
 	})
+
+	return rootRow, openWizard
+}
+
+// runTUI builds and runs the terminal UI. Requires a TTY (checked by
+// the launcher, not here).
+func runTUI(m *appModel) int {
+	app := tview.NewApplication()
+	rootRow, openWizard := buildMainScreen(m, app)
+	app.SetRoot(rootRow, true)
 
 	// first run: the wizard opens before the main screen
 	if !m.wizardSeen() {

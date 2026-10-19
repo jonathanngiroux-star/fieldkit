@@ -21,6 +21,13 @@ import (
 
 // runWizardOnScreen mounts the wizard on a sim screen with the app's
 // draw loop running, drives the script, returns the final screen text.
+//
+// Ordering is load-bearing: tview requires SetScreen BEFORE Run().
+// Calling SetScreen after Run() leaves the event loop attached to no
+// usable screen — QueueUpdateDraw then blocks forever (observed as a
+// 10m CI hang, passing locally by timing luck). A bounded readiness
+// wait (non-blank content) makes any future regression fail fast
+// instead of hanging the package.
 func runWizardOnScreen(t *testing.T, m *fieldapp.Model, script func(app *tview.Application, w *tuiWizard, screen tcell.SimulationScreen)) string {
 	t.Helper()
 	screen := tcell.NewSimulationScreen("")
@@ -34,13 +41,27 @@ func runWizardOnScreen(t *testing.T, m *fieldapp.Model, script func(app *tview.A
 	wiz := newTUIWizard(app, m, func() {})
 	app.SetRoot(wiz.pages, true)
 
+	// SetScreen BEFORE Run — the API contract.
+	app.SetScreen(screen)
 	go func() { _ = app.Run() }()
 	t.Cleanup(func() {
 		app.QueueUpdate(func() { app.Stop() })
 		time.Sleep(100 * time.Millisecond)
 	})
-	app.SetScreen(screen)
-	time.Sleep(200 * time.Millisecond)
+
+	// readiness: wait (bounded) until the loop has drawn the wizard's
+	// first step — content appears on the sim screen.
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		screen.Sync()
+		if c, _, _, _ := screen.GetContent(2, 1); c != ' ' && c != 0 {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if time.Now().After(deadline) {
+		t.Fatal("tview draw loop never became ready on the sim screen")
+	}
 
 	script(app, wiz, screen)
 

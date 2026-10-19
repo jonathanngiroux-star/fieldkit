@@ -144,7 +144,7 @@ the TUI refuses with a hint instead of hanging.
 | Command | What it does |
 |---|---|
 | `fieldkit surveys` | create/list surveys from JSON definitions |
-| `fieldkit serve` | HTTP server: public submit endpoint + `/donate` page |
+| `fieldkit serve` | HTTP server: public submit endpoint + `/donate` page (`--addr` sets the listen address, default `127.0.0.1:8080`) |
 | `fieldkit migrate` | dry-run import from Typeform exports (JSON report) |
 | `fieldkit logic` | run survey logic offline against an answer file |
 | `fieldkit export csv` | responses as CSV |
@@ -183,10 +183,13 @@ No other wallet addresses are associated with this project. Details:
 **Currently working:** survey model + SQLite store, logic engine with
 branching/required/hidden handling, public submit endpoint with
 validation errors, CSV export, Typeform migrate dry-run, plugin
-manifest contract, `version`, `donate`.
+manifest contract, `version`, `donate`, the Wails desktop GUI
+(`wails build`), and the tview/tcell TUI (`fieldkit tui`) — GUI and
+TUI both open a first-run wizard that runs the core workflow with real
+operations.
 
 **Planned:** Qualtrics migrate (gated on green Typeform fidelity),
-Wails desktop GUI, Bubble Tea TUI — each with a first-run wizard.
+migrate apply mode (beyond dry-run), ending-screen rendering.
 
 ## License
 

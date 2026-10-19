@@ -42,7 +42,7 @@ func cmdMigrate(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if !*dryRun {
-		fmt.Fprintln(stderr, "only --dry-run is supported: apply mode lands with the desktop GUI milestone")
+		fmt.Fprintln(stderr, "only --dry-run is supported: apply mode is not part of v0.1 (see docs/release-v0.1.md)")
 		return 2
 	}
 	if *format != "text" && *format != "json" {

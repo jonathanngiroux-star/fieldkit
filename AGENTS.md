@@ -34,8 +34,7 @@ quality, cold-start time, on-chain donations.
 ## Stack rules
 
 - Go + SQLite (`modernc.org/sqlite`, pure-Go — no cgo), single binary.
-- CLI: `fieldkit serve|migrate|logic|plugin|version|donate` (+ `tui`,
-  `desktop` when those steps land).
+- CLI: `fieldkit serve|migrate|logic|plugin|version|donate|tui|desktop|surveys|export` (all landed).
 - Cold start under 15 minutes; one binary or one compose. Kubernetes is a
   bug, not a feature.
 - License: MIT whole-repo. No BSL/ELv2 layer in this series.
